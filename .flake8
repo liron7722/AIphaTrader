@@ -1,0 +1,83 @@
+[flake8]
+# Reporting
+statistics = True
+show-source = True
+count = True
+
+# File Patterns
+exclude =
+    .git,
+    __pycache__,
+    docs/source/conf.py,
+    old,
+    build,
+    dist,
+    venv,
+    *.pyc,
+    *.egg-info,
+    .cache,
+    .eggs
+
+# Code Complexity
+max-complexity = 10
+max-line-length = 120
+
+# Error Codes
+# E203: Whitespace before ':' (black formatter compatibility)
+# E266: Too many leading '#' for block comment
+# E501: Line too long (handled by max-line-length)
+# W503: Line break occurred before a binary operator (black formatter compatibility)
+# F403: 'from module import *' used; unable to detect undefined names
+# F405: Name may be undefined, or defined from star imports: module
+ignore = E203, E266, E501, W503, F403, F405
+
+# Selecting Error Codes
+select = B,C,E,F,W,T4,B9
+
+# Options
+max-doc-length = 120
+max-module-members = 20
+max-methods = 15
+max-attributes = 15
+
+# Plugin Configuration
+docstring-convention = google
+assertive-test-pattern = test_*
+unittest-assert-style = unittest
+
+# Function naming style - allow uppercase in function names for certain cases
+function-rgx = (([a-z_][a-z0-9_]{2,})|([A-Z_][A-Z0-9_]{2,}))$
+
+# Additional checks
+extend-ignore = 
+    # N806 - variable in function should be lowercase
+    # Allow uppercase variables in specific cases (e.g., constants in functions)
+    N806
+
+# Per-file-ignores
+per-file-ignores =
+    # F401: Module imported but unused
+    # Ignore unused imports in __init__.py files
+    __init__.py: F401
+    
+    # Ignore certain rules in test files
+    test_*.py: S101, S106, E501
+
+# Formatting
+# Use double quotes for docstrings
+docstring-quotes = double
+
+# Ignore certain directories entirely
+exclude-from-doctest = 
+    tests/*
+    */tests/*
+
+# Ignore errors in specific files or directories
+extend-exclude =
+    legacy_code/*,
+    third_party/*
+
+# Add specific error codes to ignore for certain directories
+# Example: ignore E123 and W456 in the 'old_code' directory
+per-file-ignores =
+    old_code/*: E123, W456
