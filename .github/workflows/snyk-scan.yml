@@ -1,0 +1,43 @@
+name: Snyk Security Scan
+
+on:
+  push:
+    branches:
+      - production
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+
+      - name: Snyk Code Scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: code test
+
+      - name: Build and push Docker images
+        run: |
+          for dir in */; do
+            if [ -f "${dir}Dockerfile" ]; then
+              docker build -t AIphaTrader/${dir%/}:prod ./${dir}
+              docker push AIphaTrader/${dir%/}:prod
+            fi
+          done
+
+      - name: Snyk Container Scan
+        uses: snyk/actions/docker@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: AIphaTrader/*:prod
+          args: --file=Dockerfile

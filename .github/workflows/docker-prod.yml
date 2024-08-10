@@ -1,0 +1,70 @@
+name: Build Docker Images (Prod)
+
+on:
+  push:
+    branches:
+      - production
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      folders: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          list-files: json
+          filters: |
+            changes:
+              - added|modified:
+                - '**/Dockerfile'
+                - '**/*.py'
+                - '**/*.js'
+                - '**/*.html'
+                - '**/*.css'
+
+  security:
+    needs: changes
+    if: ${{ needs.changes.outputs.folders != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        folder: ${{ fromJson(needs.changes.outputs.folders) }}
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Extract folder name
+        id: folder
+        run: echo "::set-output name=name::$(echo ${{ matrix.folder }} | cut -d'/' -f1)"
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: ${{ steps.folder.outputs.name }}
+
+  build:
+    needs: [changes, security]
+    if: ${{ needs.changes.outputs.folders != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        folder: ${{ fromJson(needs.changes.outputs.folders) }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Extract folder name
+        id: folder
+        run: echo "::set-output name=name::$(echo ${{ matrix.folder }} | cut -d'/' -f1)"
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t AIphaTrader/${{ steps.folder.outputs.name }}:prod ./${{ steps.folder.outputs.name }}
+          docker push AIphaTrader/${{ steps.folder.outputs.name }}:prod

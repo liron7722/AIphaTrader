@@ -1,0 +1,54 @@
+name: Build Docker Images (Dev)
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      folders: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          list-files: json
+          filters: |
+            changes:
+              - added|modified:
+                - '**/Dockerfile'
+                - '**/*.py'
+                - '**/*.js'
+                - '**/*.html'
+                - '**/*.css'
+
+  build:
+    needs: changes
+    if: ${{ needs.changes.outputs.folders != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        folder: ${{ fromJson(needs.changes.outputs.folders) }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Extract folder name
+        id: folder
+        run: echo "::set-output name=name::$(echo ${{ matrix.folder }} | cut -d'/' -f1)"
+
+      - name: Build and save Docker image
+        run: |
+          docker build -t AIphaTrader/${{ steps.folder.outputs.name }}:dev ./${{ steps.folder.outputs.name }}
+          docker save AIphaTrader/${{ steps.folder.outputs.name }}:dev > ${{ steps.folder.outputs.name }}.tar
+
+      - name: Upload Docker image as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: docker-image-${{ steps.folder.outputs.name }}
+          path: ${{ steps.folder.outputs.name }}.tar
